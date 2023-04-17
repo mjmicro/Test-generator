@@ -174,6 +174,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\TestGeneratorServiceProvider::class
 
     ],
 
@@ -229,5 +230,7 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
 
     ],
+
+    'ChatGptKey' => env('CHAT_GPT_KEY', ''),
 
 ];
