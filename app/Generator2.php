@@ -29,7 +29,7 @@ class Generator2
      */
     public function generate()
     {
-       
+
 
 
         $this->createDirectory();
@@ -44,20 +44,20 @@ class Generator2
         // $controllerContent = json_encode($controllerContent);
         $prompts = $this->getPrompts();
         $inputs =  $this->getInputs($prompts);
-              // Ask the user a question
-              $userQuestion = "Generate feature test class code using Laravel 8 passport for the $controllerName using the given code: \n $controllerContent";
+        // Ask the user a question
+        $userQuestion = "Generate feature test class code using Laravel 8 passport for the $controllerName using the given code: \n $controllerContent";
 
-              // Get the embedding for the question
-              $question =  json_decode(json_encode(['embeddings' => json_decode( $this->openAiEmbeddingsCreate([
-                  'model' => 'text-embedding-ada-002',
-                  'input' => [
-                      $userQuestion,
-                  ]
-                  ]))->data]));
-      
-              // Take the question and compare it to the prompts
-              $answer =  $this->getAnswer($prompts, $inputs, $question);
-              $davanci = "Rewrite the question and give the answer with an example in PHP using given Example
+        // Get the embedding for the question
+        $question =  json_decode(json_encode(['embeddings' => json_decode($this->openAiEmbeddingsCreate([
+            'model' => 'text-embedding-ada-002',
+            'input' => [
+                $userQuestion,
+            ]
+        ]))->data]));
+
+        // Take the question and compare it to the prompts
+        $answer =  $this->getAnswer($prompts, $inputs, $question);
+        $davanci = "Rewrite the question and give the answer with an example in PHP using given Example
               Example: {$prompts[$answer['index']]}
               Question: {$userQuestion}
               Answer:";
@@ -76,42 +76,45 @@ class Generator2
                 ],
                 'temperature' => 0.9
             ];
+        $data = [
+            "model" => "text-davinci-003",
+            "prompt" => $davanci,
+            "max_tokens" => 2250,
+            "temperature" => 0.7
+        ];
+        // $curl = curl_init();
 
-        $curl = curl_init();
+        // curl_setopt_array($curl, array(
+        //     CURLOPT_URL => 'https://api.openai.com/v1/chat/completions',
+        //     CURLOPT_RETURNTRANSFER => true,
+        //     CURLOPT_ENCODING => '',
+        //     CURLOPT_MAXREDIRS => 10,
+        //     CURLOPT_TIMEOUT => 0,
+        //     CURLOPT_FOLLOWLOCATION => true,
+        //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        //     CURLOPT_CUSTOMREQUEST => 'POST',
+        //     CURLOPT_POSTFIELDS => json_encode($data),
+        //     CURLOPT_HTTPHEADER => array(
+        //         'Authorization: Bearer ' . Config::get('app.ChatGptKey'),
+        //         'Content-Type: application/json'
+        //     ),
+        // ));
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.openai.com/v1/chat/completions',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => array(
-                'Authorization: Bearer ' . Config::get('app.ChatGptKey'),
-                'Content-Type: application/json'
-            ),
-        ));
+        // $response = curl_exec($curl); curl_close($curl);
+        // $res = json_decode($response)->choices[0]->message->content;
 
-        $response = curl_exec($curl);
-        $res = json_decode($response)->choices[0]->message->content;
+        $response = $this->openAiCompletionCreate($data);
+        $res = json_decode($response)->choices[0]->text;
         $res = strstr($res, '<?php');
-        curl_close($curl);
+
         if (str_contains($res, '```')) {
             $re = '/(?<=``` ).+(?=```)/';
             preg_match_all($re, $res, $matches, PREG_SET_ORDER, 0);
-            $res = isset($matches[0][0])??$res;
+            $res = isset($matches[0][0]) ?? $res;
         }
-
-        
-
-
         $this->writeToFile(
             "$controllerName" . "Test",
             $res
-            // json_decode($response)->choices[0]->message->content
         );
     }
 
@@ -171,7 +174,7 @@ class Generator2
 
         for ($i = 0; $i < count($matches); $i++) {
             $matches[$i][0] = lcfirst(str_replace("\\", "/", $matches[$i][0]));
-            if (str_contains($matches[$i][0], '/Models/') || str_contains($matches[$i][0], '/Resources/')|| str_contains($matches[$i][0], '/Requests/')) {
+            if (str_contains($matches[$i][0], '/Models/') || str_contains($matches[$i][0], '/Resources/') || str_contains($matches[$i][0], '/Requests/')) {
                 array_push($files, $matches[$i][0]);
             }
         }
@@ -215,7 +218,7 @@ class Generator2
 
     public static  function getInputs($prompts)
     {
-       return json_decode(json_encode(['embeddings' => json_decode(self::openAiEmbeddingsCreate([
+        return json_decode(json_encode(['embeddings' => json_decode(self::openAiEmbeddingsCreate([
             'model' => 'text-embedding-ada-002',
             'input' => $prompts,
         ]))->data]));
@@ -223,13 +226,12 @@ class Generator2
 
     public static function getPrompts()
     {
-        return 
-            
-            self::phpPrompts()
-        ;
+        return
+
+            self::phpPrompts();
     }
 
-   public static function openAiCompletionCreate($data)
+    public static function openAiCompletionCreate($data)
     {
 
         $curl = curl_init();
@@ -269,7 +271,7 @@ class Generator2
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS =>json_encode($data),
+            CURLOPT_POSTFIELDS => json_encode($data),
             CURLOPT_HTTPHEADER => array(
                 'Authorization: Bearer ' . Config::get('app.ChatGptKey'),
                 'Content-Type: application/json'
@@ -282,7 +284,8 @@ class Generator2
         return $response;
     }
 
-    public static function phpPrompts(){
+    public static function phpPrompts()
+    {
         $text1 = <<<'EOT'
         <?php
 
@@ -361,7 +364,7 @@ class AuthControllerTest extends TestCase
     }
 }
 EOT;
-$text2 = <<<'EOT'
+        $text2 = <<<'EOT'
 `ProductControllerTest: 
 class ProductController extends Controller
 {
@@ -458,7 +461,6 @@ class ProductController extends Controller
 }
 `.
 EOT;
-        return [''. $text1, ''. $text2];
+        return ['' . $text1, '' . $text2];
     }
-    
 }
